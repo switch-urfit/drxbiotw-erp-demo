@@ -1,0 +1,78 @@
+<div class="intro">插單前先看<b>衝擊預覽</b>：這張急單插進去，後面哪幾張單會被延、各延幾天 — 只是試算，不動真資料。升級重點：改用「<b>該機台產能 × 當天上線人力</b>」精準估算（人力即時取自「每日排班」頁），取代現行的全廠單一概估值。</div>
+
+<h2>插單衝擊預覽（急件）</h2>
+<p class="lede">生管操作。想看「缺人時估算怎麼變」：先到「每日排班」把某位作業員設為請假，再回來重新試算。</p>
+
+<div class="card">
+  <div class="formrow">
+    <div class="field">
+      <label for="mch">機台</label>
+      <select id="mch" [ngModel]="machineId()" (ngModelChange)="machineId.set($event); onMachineChange()">
+        @for (m of candidates(); track m.id) {
+          <option [value]="m.id">{{ m.id }}（{{ m.spec }} · {{ s.presentCount(m.id) }} 人上線）</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="qty">急單數量（片）</label>
+      <input id="qty" type="number" [ngModel]="qty()" (ngModelChange)="qty.set(+$event)" min="1000" step="1000">
+    </div>
+    <div class="field">
+      <label for="pos">插入位置</label>
+      <select id="pos" [ngModel]="pos()" (ngModelChange)="pos.set(+$event)">
+        @for (p of positions(); track p.value) {
+          <option [value]="p.value">{{ p.label }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="rsn">插單原因（法規必填）</label>
+      <input id="rsn" type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)"
+             placeholder="例：客戶急單，7/25 前交貨" size="24">
+    </div>
+    <button class="primary" (click)="runPreview()">試算衝擊預覽</button>
+  </div>
+
+  @if (error()) { <div class="alert bad">{{ error() }}</div> }
+
+  @if (preview(); as p) {
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>一般工單</span>
+      <span><i style="background:var(--bad)"></i>急單（插單）</span>
+      <span><i style="background:var(--warn)"></i>被順延</span>
+    </div>
+
+    <app-gantt title="插單前" [rows]="ganttBefore()" [total]="p.totalDays" [start]="s.scheduleStart" />
+    <app-gantt title="插單後（試算，未寫入）" [rows]="ganttAfter()" [total]="p.totalDays" [start]="s.scheduleStart" />
+
+    <div class="compare">
+      <div class="box new">
+        <h4>✅ 新版精準估（本次升級）</h4>
+        依 {{ machineId() }} 當天 {{ p.people }} 人 × {{ s.machine(machineId()).ratePerPerson }} 片/分
+        ＝ {{ p.capacity | number:'1.2-2' }} 片/分 → 急單 {{ qty() | number }} 片需 <b>{{ p.rushDays }} 天</b>。
+        @if (p.delays.length) {
+          影響 {{ p.delays.length }} 張：
+          <ul class="impact-list">
+            @for (d of p.delays; track d.id) { <li>{{ d.id }} 延 <b>{{ d.days }} 天</b></li> }
+          </ul>
+        } @else { 不影響任何已排工單。 }
+      </div>
+      <div class="box old">
+        <h4>現行概估（將被取代）</h4>
+        用全廠單一概估值（每張一律約 2 天）估算 → 急單估 2 天、後面每張一律「延 2 天」。與機台產能、當天人力無關，精準度有限。
+      </div>
+    </div>
+
+    <div class="formrow" style="margin-bottom:0">
+      <button class="primary" (click)="confirm()" [disabled]="confirmed()">
+        {{ confirmed() ? '已插單 ✓' : '確認插單(寫入＋通知)' }}
+      </button>
+      <span class="hint">確認後才動真資料；多人同時改同一張會被防併發機制（optimistic locking）擋下。</span>
+    </div>
+
+    @if (confirmed()) {
+      <div class="alert ok" style="margin-top:12px">✅ 急單已插入第 {{ pos() + 1 }} 順位，後續工單排隊號碼整批後移。可到「儀表板」與「每日排班」看到佇列更新。</div>
+      <div class="notify">📱 LINE 推播 → 廠長 KEN、生管 HANK：「⚡急件插單 RUSH-2607-XX {{ qty() | number }} 片，{{ delaySummary() }}」</div>
+    }
+  }
+</div>

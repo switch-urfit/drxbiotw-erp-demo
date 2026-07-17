@@ -1,0 +1,57 @@
+<h2>儀表板 — 2026-07-17（五）</h2>
+<p class="lede">工廠、倉庫、行政三方看到的永遠是同一份即時排程（正式系統每 5 秒自動更新；本頁為互動示範）。</p>
+
+<div class="tiles">
+  <div class="tile">
+    <div class="k">今日上線人數</div>
+    <div class="v">{{ s.presentTotal() }}<small> / {{ s.assignedTotal() }} 人</small></div>
+    <div class="d">全廠作業員 8 位</div>
+  </div>
+  <div class="tile" [class.warn]="s.presentTotal() < s.assignedTotal()">
+    <div class="k">全廠當日產能</div>
+    <div class="v">{{ s.plantCapacity() | number:'1.2-2' }}<small> 片/分</small></div>
+    <div class="d">＝ Σ（每人產能 × 上線人數）</div>
+  </div>
+  <div class="tile">
+    <div class="k">預估今日產出</div>
+    <div class="v">{{ s.plantCapacity() * s.MIN_PER_DAY | number:'1.0-0' }}<small> 片</small></div>
+    <div class="d">× 480 分鐘（09–18 扣午休）</div>
+  </div>
+  <div class="tile">
+    <div class="k">今日開機</div>
+    <div class="v">{{ s.runningCount() }}<small> / 13 台</small></div>
+    <div class="d">未排班的機台不開工</div>
+  </div>
+</div>
+
+<h3>注意事項</h3>
+@if (alerts().length) {
+  @for (a of alerts(); track a.text) {
+    <div class="alert" [class.bad]="a.level === 'bad'">{{ a.level === 'bad' ? '🔴' : '⚠' }} {{ a.text }}</div>
+  }
+} @else {
+  <div class="alert ok">✅ 今日班表齊員，無缺勤、無停機。</div>
+}
+
+<h3>機台狀態（13 台，全部啟用）</h3>
+<div class="mach-grid">
+  @for (m of s.machines; track m.id) {
+    <div class="mach-mini">
+      <div class="top">
+        <span class="mid">{{ m.id }}</span>
+        <span class="type-chip">{{ m.type }}</span>
+      </div>
+      <div class="row"><span>{{ m.spec }}</span><span class="status-pill {{ status(m.id).cls }}">{{ status(m.id).text }}</span></div>
+      <div class="row"><span>今日產能</span><span>{{ s.capacity(m.id) | number:'1.2-2' }} 片/分</span></div>
+      <div class="row"><span>佇列</span><span>{{ s.queueOf(m.id).length }} 張</span></div>
+    </div>
+  }
+</div>
+
+<h3>本次升級的四個自動化點</h3>
+<div class="card" style="font-size:13.5px">
+  <p style="margin:4px 0">① <a routerLink="/shifts">每日排班 × 產能</a> — 當天產能 ＝ 上線人數 × 每人產能，缺勤自動扣產能、重算交期。</p>
+  <p style="margin:4px 0">② <a routerLink="/rush">插單衝擊預覽</a> — 按該機台產能 × 當天人力精準試算，取代全廠概估值。</p>
+  <p style="margin:4px 0">③ <a routerLink="/downtime">停機自動順延</a> — 停機紀錄送出即自動算延時、連動順延整條佇列。</p>
+  <p style="margin:4px 0">④ <a routerLink="/qms">QMS 文件產生</a> — 出貨後一鍵產出 ISO 13485 收尾文件 + 鼎新 ERP CSV（流程圖 step 11）。</p>
+</div>

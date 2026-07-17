@@ -1,0 +1,30 @@
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">DRX</div>
+      <div>
+        <div class="b-title">生產排程協調平台</div>
+        <div class="b-sub">排程升級功能展示</div>
+      </div>
+    </div>
+    <span class="demo-badge">示範環境 · 不影響正式資料</span>
+    <nav>
+      @for (item of nav; track item.path) {
+        <a [routerLink]="item.path" routerLinkActive="active">
+          <span class="icon">{{ item.icon }}</span>{{ item.label }}
+        </a>
+      }
+    </nav>
+    <div class="persona">
+      <div class="avatar">H</div>
+      <div>
+        <div class="p-name">HANK</div>
+        <div class="p-role">生管（demo 身分）</div>
+      </div>
+    </div>
+    <div class="side-note">機台／人員資料為 2026-06-17 正式系統快照，正式數字以系統主檔為準。</div>
+  </aside>
+  <main class="content">
+    <router-outlet />
+  </main>
+</div>

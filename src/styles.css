@@ -1,0 +1,161 @@
+/* ════════════════════════════════════════════════════════════
+   DRX 生產排程協調平台 — 升級功能展示（Demo）
+   全域主題：紫色主題 + 深色模式（跟隨系統），與正式系統一致
+   ════════════════════════════════════════════════════════════ */
+:root{
+  --accent:#7C3AED; --accent-soft:#EDE7FB; --accent-ink:#5B21B6;
+  --ok:#15803D; --ok-soft:#E3F2E7; --warn:#CA8A04; --warn-soft:#FBF3D9;
+  --bad:#DC2626; --bad-soft:#FBE7E7; --down:#6B7280; --down-soft:#ECECEF;
+  --bg:#FAF9FB; --surface:#FFFFFF; --surface2:#F4F2F8; --line:#E5E1EC;
+  --ink:#241F31; --ink2:#5D5670; --ink3:#8B84A0;
+  --bar-track:#EFEDF4; --on-accent:#FFFFFF; --sidebar:#231A38; --sidebar-ink:#D8CFF0;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --accent:#A78BFA; --accent-soft:#2E2447; --accent-ink:#C4B5FD;
+    --ok:#34D399; --ok-soft:#12301F; --warn:#EAB308; --warn-soft:#332A0E;
+    --bad:#F87171; --bad-soft:#3A1717; --down:#9CA3AF; --down-soft:#2A2833;
+    --bg:#17151C; --surface:#1F1C26; --surface2:#282433; --line:#37323F;
+    --ink:#EDEAF4; --ink2:#B0A9C2; --ink3:#7D7690;
+    --bar-track:#282433; --on-accent:#1A1625; --sidebar:#14101E; --sidebar-ink:#B8AED4;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Segoe UI",sans-serif;
+  font-size:15px; line-height:1.65;
+}
+h2{font-size:19px; margin:4px 0 4px}
+h3{font-size:15.5px; margin:20px 0 8px}
+.lede{color:var(--ink2); font-size:13.5px; margin:0 0 16px; max-width:78ch}
+.hint{font-size:12.5px; color:var(--ink3); margin-top:6px}
+
+/* ── 說明框 ── */
+.intro{
+  background:var(--accent-soft); border:1px solid var(--line); border-radius:10px;
+  padding:12px 16px; font-size:13.5px; color:var(--ink2); margin-bottom:18px;
+}
+.intro b{color:var(--accent-ink)}
+
+/* ── 統計磚 ── */
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(175px,1fr)); gap:12px; margin:14px 0 20px}
+.tile{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 16px}
+.tile .k{font-size:12px; color:var(--ink3); letter-spacing:.06em}
+.tile .v{font-size:25px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.25}
+.tile .v small{font-size:13px; font-weight:400; color:var(--ink2)}
+.tile .d{font-size:12px; color:var(--ink2)}
+.tile.warn .v{color:var(--warn)}
+
+/* ── 卡片 ── */
+.card{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px}
+.mach-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px}
+.mach-head .mid{font-weight:700; font-variant-numeric:tabular-nums}
+.type-chip{font-size:11.5px; padding:1.5px 8px; border-radius:999px; font-weight:600; background:var(--accent-soft); color:var(--accent-ink)}
+.cap{margin-left:auto; font-size:13.5px; color:var(--ink2); font-variant-numeric:tabular-nums}
+.cap b{font-size:17px; color:var(--ink)}
+
+/* ── 作業員名牌 ── */
+.ops{display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; align-items:center}
+.op{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 6px 5px 12px; border-radius:999px;
+  border:1px solid var(--line); background:var(--surface2); font-size:13.5px; color:var(--ink);
+}
+.op .name{cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:none; border:none; font:inherit; color:inherit; padding:0}
+.op .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.op.absent .name{color:var(--ink3); text-decoration:line-through}
+.op.absent .dot{background:var(--bad)}
+.op .tag{font-size:10.5px; color:var(--bad); font-weight:700}
+.op .rm{background:none; border:none; cursor:pointer; color:var(--ink3); font-size:13px; padding:0 5px; border-radius:50%}
+.op .rm:hover{color:var(--bad)}
+.op .name:focus-visible,.op .rm:focus-visible{outline:2px solid var(--accent); border-radius:4px}
+
+/* ── 工單列 / 警示 ── */
+.wo-line{font-size:13.5px; color:var(--ink2); border-top:1px dashed var(--line); margin-top:10px; padding-top:9px; font-variant-numeric:tabular-nums}
+.wo-line b{color:var(--ink)}
+.alert{border-radius:9px; padding:9px 13px; font-size:13.5px; margin-top:9px; background:var(--warn-soft); color:var(--warn); border:1px solid currentColor}
+.alert.bad{background:var(--bad-soft); color:var(--bad)}
+.alert.ok{background:var(--ok-soft); color:var(--ok)}
+.alert.info{background:var(--accent-soft); color:var(--accent-ink)}
+
+/* ── 表單 ── */
+.formrow{display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end; margin:12px 0}
+.field{display:flex; flex-direction:column; gap:4px}
+.field label{font-size:12.5px; color:var(--ink2); font-weight:600}
+.field input,.field select{
+  font:inherit; padding:7px 10px; border-radius:8px; border:1px solid var(--line);
+  background:var(--surface2); color:var(--ink); min-width:130px;
+}
+.field input:focus-visible,.field select:focus-visible{outline:2px solid var(--accent)}
+button.primary,button.ghost{font:inherit; font-weight:700; border-radius:8px; padding:8px 18px; cursor:pointer; font-size:14px}
+button.primary{background:var(--accent); border:1px solid var(--accent); color:var(--on-accent)}
+button.ghost{background:none; border:1.5px solid var(--accent); color:var(--accent-ink)}
+button.primary:focus-visible,button.ghost:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+button[disabled]{opacity:.45; cursor:not-allowed}
+button.small{padding:5px 14px; font-size:13px}
+
+/* ── 甘特圖 ── */
+.gantt{margin:10px 0 4px}
+.g-title{font-size:12.5px; color:var(--ink3); letter-spacing:.05em; margin:12px 0 6px; font-weight:700}
+.g-row{display:grid; grid-template-columns:150px 1fr; gap:10px; align-items:center; margin:5px 0}
+.g-label{font-size:12.5px; color:var(--ink2); text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.g-track{position:relative; height:26px; background:var(--bar-track); border-radius:5px; overflow:hidden}
+.g-bar{
+  position:absolute; top:3px; bottom:3px; border-radius:4px; background:var(--accent);
+  display:flex; align-items:center; padding:0 8px; font-size:11.5px; font-weight:700;
+  color:var(--on-accent); white-space:nowrap; overflow:hidden; min-width:18px;
+}
+.g-bar.rush{background:var(--bad)}
+.g-bar.delay{background:var(--warn)}
+.g-bar.downtime{background:var(--down); background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.35) 5px 9px)}
+.g-axis{display:grid; grid-template-columns:150px 1fr; gap:10px; margin-top:2px}
+.g-axis .ticks{display:flex; justify-content:space-between; font-size:11px; color:var(--ink3); font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion: no-preference){ .g-bar{transition:left .45s ease, width .45s ease} }
+.legend{display:flex; flex-wrap:wrap; gap:14px; margin:10px 0 2px; font-size:12.5px; color:var(--ink2)}
+.legend span{display:inline-flex; align-items:center; gap:6px}
+.legend i{width:14px; height:10px; border-radius:3px; display:inline-block}
+
+/* ── 新舊對照 ── */
+.compare{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px}
+@media (max-width:720px){ .compare{grid-template-columns:1fr} }
+.compare .box{border:1px solid var(--line); border-radius:9px; padding:11px 14px; font-size:13.5px}
+.compare .box.old{color:var(--ink3)}
+.compare .box h4{margin:0 0 6px; font-size:13px}
+.compare .box.new{border-color:var(--accent); background:var(--accent-soft)}
+.compare .box.new h4{color:var(--accent-ink)}
+.impact-list{margin:8px 0 0; padding-left:18px; font-variant-numeric:tabular-nums}
+.impact-list li{margin:2px 0}
+
+/* ── 資料表 ── */
+.tablewrap{overflow-x:auto}
+table.data{width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums}
+table.data th{text-align:left; font-size:12px; color:var(--ink3); font-weight:600; letter-spacing:.05em; border-bottom:1.5px solid var(--line); padding:7px 10px}
+table.data td{border-bottom:1px solid var(--line); padding:7px 10px; vertical-align:top}
+.status-pill{font-size:11.5px; padding:2px 9px; border-radius:999px; font-weight:700; white-space:nowrap}
+.status-pill.ok{background:var(--ok-soft); color:var(--ok)}
+.status-pill.warn{background:var(--warn-soft); color:var(--warn)}
+.status-pill.bad{background:var(--bad-soft); color:var(--bad)}
+.status-pill.accent{background:var(--accent-soft); color:var(--accent-ink)}
+.status-pill.idle{background:var(--down-soft); color:var(--down)}
+
+/* ── QMS 文件卡 ── */
+.docs{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin-top:14px}
+.doc{border:1px solid var(--line); border-radius:10px; padding:13px 15px; background:var(--surface); display:flex; flex-direction:column; gap:5px}
+.doc .icon{font-size:21px}
+.doc b{font-size:14px}
+.doc .meta{font-size:12px; color:var(--ink2); font-variant-numeric:tabular-nums}
+.doc .dl{margin-top:auto; font-size:12.5px; color:var(--accent-ink); font-weight:700}
+
+/* ── LINE 通知模擬 ── */
+.notify{
+  border-left:3px solid var(--accent); background:var(--surface2); border-radius:0 8px 8px 0;
+  padding:8px 13px; font-size:13px; color:var(--ink2); margin-top:10px;
+}
+
+/* ── 儀表板機台格 ── */
+.mach-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(215px,1fr)); gap:10px; margin-top:8px}
+.mach-mini{background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:11px 14px; font-size:13px}
+.mach-mini .top{display:flex; align-items:center; gap:8px; margin-bottom:3px}
+.mach-mini .mid{font-weight:700; font-size:12.5px; font-variant-numeric:tabular-nums}
+.mach-mini .row{color:var(--ink2); font-variant-numeric:tabular-nums; display:flex; justify-content:space-between; gap:8px}

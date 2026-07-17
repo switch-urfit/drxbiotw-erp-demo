@@ -1,0 +1,22 @@
+<div class="intro">醫療器材法規（<b>ISO 13485</b>）要求：每一次有人動了排程，系統都要留紀錄 — <b>誰、改什麼、何時、為什麼</b>。本頁即時彙整你在這個 Demo 裡的每個操作（排班調整、缺勤登記、插單、停機、QMS 產出），正式系統寫入 schedule_changes 稽核表。</div>
+
+<h2>稽核紀錄 <span class="status-pill accent" style="vertical-align:3px">{{ s.audit().length }} 筆</span></h2>
+<p class="lede">到其他頁面操作看看 — 每個動作都會即時出現在這裡（最新在最上面）。</p>
+
+<div class="card tablewrap">
+  <table class="data">
+    <thead>
+      <tr><th style="width:80px">時間</th><th style="width:120px">操作者</th><th>動作</th><th>原因／說明</th></tr>
+    </thead>
+    <tbody>
+      @for (e of s.audit(); track $index) {
+        <tr>
+          <td>{{ e.time }}</td>
+          <td>{{ e.who }}</td>
+          <td>{{ e.action }}</td>
+          <td>{{ e.reason }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,81 @@
+<div class="intro">核心公式：<b>當天該機產能（片/分）＝ 每人每分鐘產能 × 當天實際上線人數</b>。點作業員名牌可切換「請假」，按 × 調離；「加派」只會列出<b>會操作該機型、且今天還沒被排到其他機台</b>的人。所有變動即時重算產能與交期並寫入稽核 — 這是目前靠廠長人工判斷的部分，升級後由系統自動完成。</div>
+
+<h2>每日排班 × 動態產能（2026-07-17）</h2>
+<p class="lede">廠長前一天已排好班表（每日機台運作計畫）。沒有排班的機台今天不開工。技能分布：平面 8 人會、彈力 7 人、3D 5 人、4D 僅 3 人（最稀缺）。</p>
+
+<div class="tiles">
+  <div class="tile">
+    <div class="k">今日上線人數</div>
+    <div class="v">{{ s.presentTotal() }}<small> / {{ s.assignedTotal() }} 人</small></div>
+    <div class="d">全廠作業員 8 位</div>
+  </div>
+  <div class="tile" [class.warn]="s.presentTotal() < s.assignedTotal()">
+    <div class="k">全廠當日產能</div>
+    <div class="v">{{ s.plantCapacity() | number:'1.2-2' }}<small> 片/分</small></div>
+    <div class="d">＝ Σ（每人產能 × 上線人數）</div>
+  </div>
+  <div class="tile">
+    <div class="k">預估今日產出</div>
+    <div class="v">{{ s.plantCapacity() * s.MIN_PER_DAY | number:'1.0-0' }}<small> 片</small></div>
+    <div class="d">× 480 分鐘</div>
+  </div>
+  <div class="tile">
+    <div class="k">今日開機</div>
+    <div class="v">{{ s.runningCount() }}<small> / 13 台</small></div>
+    <div class="d">未排班 {{ 13 - s.runningCount() }} 台不開工</div>
+  </div>
+</div>
+
+@for (m of s.machines; track m.id) {
+  <div class="card">
+    <div class="mach-head">
+      <span class="mid">{{ m.id }}</span>
+      <span class="type-chip">{{ m.type }}</span>
+      <span style="font-size:13px;color:var(--ink2)">{{ m.spec }} · 標準 {{ m.stdOps }} 人 · 每人 {{ m.ratePerPerson }} 片/分</span>
+      <span class="cap">今日產能 <b>{{ s.capacity(m.id) | number:'1.2-2' }}</b> 片/分（{{ s.presentCount(m.id) }}/{{ m.stdOps }} 人）</span>
+    </div>
+
+    <div class="ops">
+      @for (op of s.assignedOps(m.id); track op.name) {
+        <span class="op" [class.absent]="op.absent">
+          <button class="name" (click)="s.toggleAbsent(m.id, op.name)"
+                  [attr.aria-pressed]="op.absent" title="點擊切換請假">
+            <span class="dot"></span>{{ op.name }}（{{ op.empNo }}）
+            @if (op.absent) { <span class="tag">請假</span> }
+          </button>
+          <button class="rm" (click)="s.removeOperator(m.id, op.name)" title="調離此機台">✕</button>
+        </span>
+      } @empty {
+        <span style="font-size:13px;color:var(--ink3)">今日未排班 — 不開工</span>
+      }
+      @if (s.availableFor(m.id).length && s.assignedOps(m.id).length < m.maxOps) {
+        <select #sel style="font:inherit;font-size:12.5px;padding:4px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--ink)">
+          <option value="">＋ 加派…</option>
+          @for (op of s.availableFor(m.id); track op.name) {
+            <option [value]="op.name">{{ op.name }}（會 {{ op.skills.join('/') }}）</option>
+          }
+        </select>
+        <button class="ghost small" (click)="onAdd(m.id, sel)">加入</button>
+      }
+    </div>
+
+    @if (s.queueOf(m.id).length) {
+      <div class="wo-line">
+        佇列首單 <b>{{ s.queueOf(m.id)[0].id }}</b> {{ s.queueOf(m.id)[0].item }} · {{ s.queueOf(m.id)[0].qty | number }} 片 ·
+        @if (firstOrderEta(m.id); as e) {
+          需時 <b>{{ e.days }} 天</b> · 預計完成 <b>{{ e.eta }}</b>
+        } @else {
+          需時 <b>—（今日 0 產出）</b>
+        }
+        @if (s.queueOf(m.id).length > 1) { · 佇列共 {{ s.queueOf(m.id).length }} 張 }
+      </div>
+    }
+
+    @if (understaffMsg(m.id); as msg) {
+      <div class="alert" [class.bad]="s.presentCount(m.id) === 0">{{ s.presentCount(m.id) === 0 ? '🔴' : '⚠' }} {{ msg }}</div>
+    }
+  </div>
+}
+
+<p class="hint">※ 一天工作時間 09:00–18:00，扣午休 60 分鐘 ＝ 480 分鐘。工單需時 ＝ 數量 ÷（當天產能 × 480），以天為最小單位無條件進位。<br>
+※ 資料品質提醒：玉映與金英的員工編號在正式系統中同為 023（重複），已列入升級前置作業修正。</p>

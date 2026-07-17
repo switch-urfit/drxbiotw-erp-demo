@@ -1,0 +1,62 @@
+<div class="intro">流程圖第 11 步「<b>QMS 文件 + ERP 收尾</b>」：工單出貨後，一鍵產生 ISO 13485 所需文件（製令單、批次生產紀錄、出貨單 PDF）＋ 鼎新 Smart ERP 匯入 CSV。文件引擎沿用已驗證的報表產生器（mocr-to-qms），整合進平台後<b>資料直接取自系統</b>（工單、批號、QC、出貨紀錄），不必再另開工具、手動套表。</div>
+
+<h2>QMS 文件一鍵產生（訂單收尾）</h2>
+<p class="lede">權限：業助／生管／QC／管理員。未出貨的工單不可產生（按鈕停用）。</p>
+
+<div class="card">
+  <div class="tablewrap">
+    <table class="data">
+      <thead>
+        <tr><th>工單編號</th><th>客戶</th><th>品項</th><th>數量</th><th>批號</th><th>狀態</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (o of orders; track o.id) {
+          <tr>
+            <td>{{ o.id }}</td>
+            <td>{{ o.customer }}</td>
+            <td>{{ o.item }}</td>
+            <td>{{ o.qty | number }}</td>
+            <td>{{ o.batch }}</td>
+            <td><span class="status-pill" [class.accent]="o.status === '已出貨'" [class.ok]="o.status === '已入庫'">{{ o.status }}</span></td>
+            <td>
+              @if (o.status === '已出貨') {
+                <button class="primary small" (click)="generate(o.id)"
+                        [disabled]="generating() || generatedFor() === o.id">
+                  {{ generatedFor() === o.id ? '已產生 ✓' : generating() ? '產生中…' : '產生 QMS 文件' }}
+                </button>
+              } @else {
+                <button class="ghost small" disabled>出貨後可產生</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  @if (generatedFor(); as oid) {
+    <div class="docs">
+      <div class="doc">
+        <span class="icon">📄</span><b>製令單</b>
+        <span class="meta">MO-2606-18 · {{ oid }}<br>機台 2DMSK-01 · 220,000 片</span>
+        <span class="dl">⬇ PDF（示範）</span>
+      </div>
+      <div class="doc">
+        <span class="icon">📋</span><b>批次生產紀錄</b>
+        <span class="meta">批號 B20260612-01<br>開工→QC→入庫 全程紀錄 · 簽核：QC KAILIN</span>
+        <span class="dl">⬇ PDF（示範）</span>
+      </div>
+      <div class="doc">
+        <span class="icon">🚚</span><b>出貨單</b>
+        <span class="meta">SH-2606-33 · 康是美<br>出貨日 2026-06-14 · 經辦：業助 JUDY</span>
+        <span class="dl">⬇ PDF（示範）</span>
+      </div>
+      <div class="doc">
+        <span class="icon">🗂</span><b>ERP 匯入檔</b>
+        <span class="meta">erp_{{ oid }}.csv<br>鼎新 Smart ERP 進銷存格式</span>
+        <span class="dl">⬇ CSV（示範）</span>
+      </div>
+    </div>
+    <div class="alert ok" style="margin-top:12px">✅ 4 份文件產生完成，全程寫入 upload_log 稽核。文件版型沿用現行報表產生器（mocr-to-qms）已驗證的 Word/Excel 模板，正式版型由業助／QC 確認後定稿。</div>
+  }
+</div>

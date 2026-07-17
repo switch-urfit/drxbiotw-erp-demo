@@ -1,0 +1,62 @@
+<div class="intro">機台停了（換料、故障、保養），排在它後面的單實際上全部要往後推。現行系統只做「記錄＋甘特圖顯示」，順延要生管手動操作；升級後：<b>停機紀錄一送出，系統自動算出該延多久、連動順延後面所有未完成單</b>（全部成功或全部不動），每張留稽核紀錄。</div>
+
+<h2>停機自動順延</h2>
+<p class="lede">領班／廠長／生管可記錄。停機時數 ÷ 8 工作小時 ＝ 順延天數（無條件進位）。</p>
+
+<div class="card">
+  <div class="formrow">
+    <div class="field">
+      <label for="dmch">機台</label>
+      <select id="dmch" [ngModel]="machineId()" (ngModelChange)="machineId.set($event); onMachineChange()">
+        @for (m of candidates(); track m.id) {
+          <option [value]="m.id">{{ m.id }}（{{ m.spec }} · 佇列 {{ s.queueOf(m.id).length }} 張）</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="drsn">停機原因</label>
+      <select id="drsn" [ngModel]="reason()" (ngModelChange)="reason.set($event)">
+        @for (r of reasons; track r) { <option [value]="r">{{ r }}</option> }
+      </select>
+    </div>
+    <div class="field">
+      <label for="dhrs">預估停機時長（小時）</label>
+      <input id="dhrs" type="number" [ngModel]="hours()" (ngModelChange)="hours.set(+$event)" min="1" max="72">
+    </div>
+    <div class="field">
+      <label for="dnote">備註</label>
+      <input id="dnote" type="text" [ngModel]="note()" (ngModelChange)="note.set($event)"
+             placeholder="例：封邊模組過熱送修" size="22">
+    </div>
+    <button class="primary" (click)="record()" [disabled]="!!activeDt()">記錄停機並自動順延</button>
+    <button class="ghost" (click)="end()" [disabled]="!activeDt()">結束停機</button>
+  </div>
+
+  @if (error()) { <div class="alert bad">{{ error() }}</div> }
+
+  @if (activeDt(); as dt) {
+    <div class="alert bad">🔧 {{ dt.machineId }} 停機中（{{ dt.reason }}，預估 {{ dt.hours }} 小時）— 甘特圖以灰色標示，工廠工作台顯示橫幅提醒。</div>
+  }
+
+  @if (result(); as r) {
+    <div class="legend">
+      <span><i style="background:var(--accent)"></i>一般工單</span>
+      <span><i style="background:var(--warn)"></i>被順延</span>
+      <span><i style="background:var(--down);background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(255,255,255,.4) 5px 9px)"></i>停機</span>
+    </div>
+
+    <app-gantt title="停機前排程" [rows]="ganttBefore()" [total]="r.totalDays" [start]="s.scheduleStart" />
+    <app-gantt title="停機後（系統自動連動順延）" [rows]="ganttAfter()" [total]="r.totalDays" [start]="s.scheduleStart" />
+
+    <div class="alert" style="margin-top:12px">
+      🔧 {{ r.dt.reason }}停機 {{ r.dt.hours }} 小時 ＝ 延 <b>{{ r.dt.delayDays }} 天</b>（÷ 8 工作小時/日）。
+      本機 {{ r.dt.affected }} 張未完成工單已<b>整批自動順延 {{ r.dt.delayDays }} 天</b>（全部成功或全部不動）。
+      現行流程需生管手動順延 — 升級後這一步由系統完成。
+    </div>
+    <div class="notify">📱 LINE 推播 → 生管 HANK、廠長 KEN：「🔧 {{ machineId() }} {{ r.dt.reason }}停機 {{ r.dt.hours }}h，{{ r.dt.affected }} 張工單自動順延 {{ r.dt.delayDays }} 天」</div>
+
+    @if (!activeDt()) {
+      <div class="alert ok" style="margin-top:10px">✅ 停機已結束並寫入結束時間。若實際停機比預估短，系統會提示把多延的時間收回來。</div>
+    }
+  }
+</div>
