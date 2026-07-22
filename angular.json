@@ -55,6 +55,7 @@
           },
           "configurations": {
             "production": {
+              "baseHref": "/drxbiotw-erp-demo/",
               "budgets": [
                 {
                   "type": "initial",

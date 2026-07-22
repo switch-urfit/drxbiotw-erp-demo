@@ -13,6 +13,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 export class App {
   readonly nav = [
     { path: '/dashboard', icon: '📊', label: '儀表板' },
+    { path: '/delivery',  icon: '📅', label: '交期追蹤' },
+    { path: '/gantt',     icon: '📈', label: '生產甘特圖' },
     { path: '/shifts',    icon: '👥', label: '每日排班 × 產能' },
     { path: '/rush',      icon: '⚡', label: '插單衝擊預覽' },
     { path: '/downtime',  icon: '🔧', label: '停機自動順延' },

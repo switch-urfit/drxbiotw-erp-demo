@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DRX 排程升級展示</title>
+  <script>
+    // SPA redirect for GitHub Pages
+    // Converts path to query string so index.html can restore it
+    var seg = location.pathname.replace(/\/drxbiotw-erp-demo/, '').replace(/^\/+/, '/');
+    location.replace(
+      location.origin + '/drxbiotw-erp-demo/?p=' + encodeURIComponent(seg + location.search) + location.hash
+    );
+  </script>
+</head>
+<body></body>
+</html>

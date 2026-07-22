@@ -1,0 +1,125 @@
+<h2>生產甘特圖</h2>
+<p class="lede">所有機台的歷史生產紀錄與未來排程。可切換為「依品項」視角，查看每項產品的跨機台排程與固定日產能。</p>
+
+<!-- 視角切換 -->
+<div class="gantt-toggle">
+  <button [class.active]="viewMode() === 'machine'" (click)="setView('machine')">依機台</button>
+  <button [class.active]="viewMode() === 'product'" (click)="setView('product')">依品項</button>
+</div>
+
+<!-- 圖例 -->
+<div class="legend">
+  <span><i style="background:var(--ok)"></i> 已完成</span>
+  <span><i style="background:var(--accent)"></i> 生產中</span>
+  <span><i style="background:#60A5FA"></i> 已排程</span>
+  <span><i style="background:var(--down)"></i> 待排程</span>
+  <span><i style="background:var(--warn)"></i> 延遲</span>
+  <span><i style="background:var(--bad)"></i> 急件</span>
+  <span class="today-legend"><i class="today-line-legend"></i> 今天</span>
+</div>
+
+<!-- 甘特圖 -->
+<div class="prod-gantt-wrap">
+  <div class="prod-gantt">
+    <!-- 時間軸（頂部） -->
+    <div class="pg-header">
+      <div class="pg-label-col"></div>
+      <div class="pg-track-col">
+        @for (t of ticks(); track t.offset) {
+          <span class="pg-tick" [style.left.%]="pct(t.offset)">{{ t.label }}</span>
+        }
+      </div>
+    </div>
+
+    <!-- 每列 -->
+    @for (lane of lanes(); track lane.key) {
+      <div class="pg-row">
+        <div class="pg-label-col">
+          <div class="pg-lane-label">{{ lane.label }}</div>
+          @if (lane.sublabel) {
+            <div class="pg-lane-sub">{{ lane.sublabel }}</div>
+          }
+        </div>
+        <div class="pg-track-col">
+          <div class="pg-track">
+            <!-- 今天標線 -->
+            <div class="pg-today" [style.left.%]="todayPct()"></div>
+            <!-- 工單色條 -->
+            @for (b of lane.blocks; track b.id) {
+              <div class="pg-bar pg-{{ b.cls }}"
+                   [style.left.%]="pct(b.startDay)"
+                   [style.width.%]="pct(b.lengthDays)"
+                   [title]="b.tooltip"
+                   (mouseenter)="hoveredBlock.set(b.id)"
+                   (mouseleave)="hoveredBlock.set(null)"
+                   [class.hovered]="hoveredBlock() === b.id">
+                <span class="pg-bar-text">{{ b.id }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+
+<!-- 統計摘要 -->
+@if (viewMode() === 'machine') {
+  <h3>機台日產能一覽</h3>
+  <div class="intro">
+    每台機台的日產能 = <b>每人每分鐘產能 × 標準人數 × 480 分鐘/天</b>。實際產能隨當日上線人數浮動，甘特圖以標準人力估算。
+  </div>
+  <div class="tablewrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>機台</th>
+          <th>規格</th>
+          <th>類型</th>
+          <th style="text-align:right">日產能（片/天）</th>
+          <th style="text-align:right">排程中工單</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of machineSummary(); track m.id) {
+          <tr>
+            <td class="mono" style="font-size:12.5px">{{ m.id.replace('DRX-P-', '') }}</td>
+            <td>{{ m.spec }}</td>
+            <td><span class="type-chip">{{ m.type }}</span></td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ m.dailyCap | number:'1.0-0' }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ m.orders }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <h3>品項產能與排程</h3>
+  <div class="intro">
+    每品項日產能由機台類型決定（<b>固定日產能 = 每人產能 × 標準人數 × 480 分鐘</b>），增減人力或機台直接影響完成天數。
+  </div>
+  <div class="tablewrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>品項</th>
+          <th>機台類型</th>
+          <th style="text-align:right">單台日產能（片/天）</th>
+          <th style="text-align:right">累計排程量</th>
+          <th style="text-align:right">生產批次</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (p of productSummary(); track p.item) {
+          <tr>
+            <td>{{ p.item }}</td>
+            <td><span class="type-chip">{{ p.type }}</span></td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.dailyCap | number:'1.0-0' }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.totalQty | number }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.batches }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+}

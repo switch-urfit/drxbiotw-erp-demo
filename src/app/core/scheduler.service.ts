@@ -4,9 +4,10 @@
 // ══════════════════════════════════════════════════════════
 import { Injectable, computed, signal } from '@angular/core';
 import {
-  AuditEntry, Downtime, Machine, Operator, QueuedOrder, RushPreviewResult, WorkOrder,
+  AuditEntry, Downtime, GanttBlock, GanttLane, Machine, Operator,
+  OrderStatus, QueuedOrder, RushPreviewResult, ScheduledOrder, WorkOrder,
 } from './models';
-import { DEFAULT_ASSIGNMENTS, DEFAULT_QUEUES, MACHINES, OPERATORS } from './data';
+import { ALL_ORDERS, DEFAULT_ASSIGNMENTS, DEFAULT_QUEUES, MACHINES, OPERATORS } from './data';
 
 @Injectable({ providedIn: 'root' })
 export class SchedulerService {
@@ -194,5 +195,175 @@ export class SchedulerService {
     const now = new Date();
     const time = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     this.audit.update(list => [{ time, who, action, reason: reason || '—' }, ...list]);
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // 交期追蹤
+  // ══════════════════════════════════════════════════════════
+  readonly allOrders = signal<ScheduledOrder[]>(ALL_ORDERS);
+
+  /** 甘特圖時間軸基準日（往前 50 天 ≈ 6 月初） */
+  readonly ganttOrigin = new Date(2026, 5, 1);
+  /** 甘特圖結束日 */
+  readonly ganttEnd = new Date(2026, 7, 15);
+
+  private daysBetween(a: Date, b: Date): number {
+    return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+  }
+
+  parseDate(s: string): Date {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+
+  dayOffset(dateStr: string): number {
+    return this.daysBetween(this.ganttOrigin, this.parseDate(dateStr));
+  }
+
+  get ganttTotalDays(): number {
+    return this.daysBetween(this.ganttOrigin, this.ganttEnd);
+  }
+
+  get todayOffset(): number {
+    return this.daysBetween(this.ganttOrigin, this.today);
+  }
+
+  formatDate(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  deliveryStatus(o: ScheduledOrder): { cls: string; text: string } {
+    if (o.status === 'shipped') return { cls: 'ok', text: '已出貨' };
+    if (o.status === 'completed') return { cls: 'ok', text: '已完成' };
+    if (o.delayDays && o.delayDays > 0) {
+      if (o.actualDate) return { cls: 'bad', text: `延遲 ${o.delayDays} 天` };
+      return { cls: 'warn', text: `預計延遲 ${o.delayDays} 天` };
+    }
+    if (o.status === 'in_progress') return { cls: 'accent', text: '生產中' };
+    if (o.status === 'scheduled') return { cls: 'accent', text: '已排程' };
+    return { cls: 'idle', text: '待排程' };
+  }
+
+  filterOrders(query: string, statusFilter: string): ScheduledOrder[] {
+    let list = this.allOrders();
+    if (statusFilter && statusFilter !== 'all') {
+      if (statusFilter === 'delayed') {
+        list = list.filter(o => (o.delayDays ?? 0) > 0);
+      } else if (statusFilter === 'done') {
+        list = list.filter(o => o.status === 'shipped' || o.status === 'completed');
+      } else if (statusFilter === 'active') {
+        list = list.filter(o => o.status === 'in_progress' || o.status === 'scheduled');
+      } else {
+        list = list.filter(o => o.status === statusFilter);
+      }
+    }
+    if (query) {
+      const q = query.toLowerCase();
+      list = list.filter(o =>
+        o.id.toLowerCase().includes(q) ||
+        o.item.toLowerCase().includes(q) ||
+        o.productCode.toLowerCase().includes(q) ||
+        o.customer.toLowerCase().includes(q) ||
+        o.salesChannel.toLowerCase().includes(q) ||
+        o.machineId.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }
+
+  // ══════════════════════════════════════════════════════════
+  // 甘特圖資料產生
+  // ══════════════════════════════════════════════════════════
+  private blockCls(o: ScheduledOrder): GanttBlock['cls'] {
+    if (o.rush) return 'rush';
+    if ((o.delayDays ?? 0) > 0) return 'delayed';
+    const s = o.status;
+    if (s === 'shipped' || s === 'completed') return 'completed';
+    if (s === 'in_progress') return 'in_progress';
+    if (s === 'scheduled') return 'scheduled';
+    return 'pending';
+  }
+
+  ganttByMachine(): GanttLane[] {
+    const orders = this.allOrders();
+    const grouped = new Map<string, ScheduledOrder[]>();
+    for (const o of orders) {
+      const list = grouped.get(o.machineId) ?? [];
+      list.push(o);
+      grouped.set(o.machineId, list);
+    }
+    return this.machines
+      .filter(m => grouped.has(m.id))
+      .map(m => {
+        const mOrders = grouped.get(m.id)!.sort((a, b) =>
+          this.dayOffset(a.startDate) - this.dayOffset(b.startDate));
+        return {
+          key: m.id,
+          label: m.id.replace('DRX-P-', ''),
+          sublabel: `${m.spec} · ${m.type}`,
+          blocks: mOrders.map(o => ({
+            id: o.id,
+            label: `${o.id} ${o.item}`,
+            startDay: Math.max(0, this.dayOffset(o.startDate)),
+            lengthDays: Math.max(1, this.dayOffset(o.endDate) - this.dayOffset(o.startDate)),
+            cls: this.blockCls(o),
+            tooltip: `${o.id}\n${o.item} × ${o.qty.toLocaleString()}\n${o.customer}\n${o.startDate} → ${o.endDate}`,
+          })),
+        };
+      });
+  }
+
+  ganttByProduct(): GanttLane[] {
+    const orders = this.allOrders();
+    const grouped = new Map<string, ScheduledOrder[]>();
+    for (const o of orders) {
+      const list = grouped.get(o.item) ?? [];
+      list.push(o);
+      grouped.set(o.item, list);
+    }
+    const lanes: GanttLane[] = [];
+    for (const [item, itemOrders] of grouped) {
+      const sorted = itemOrders.sort((a, b) =>
+        this.dayOffset(a.startDate) - this.dayOffset(b.startDate));
+      const type = sorted[0].machineType;
+      const machineIds = [...new Set(sorted.map(o => o.machineId))];
+      lanes.push({
+        key: item,
+        label: item,
+        sublabel: `${type} · ${machineIds.length} 台`,
+        blocks: sorted.map(o => ({
+          id: o.id,
+          label: `${o.id} (${o.machineId.replace('DRX-P-', '')})`,
+          startDay: Math.max(0, this.dayOffset(o.startDate)),
+          lengthDays: Math.max(1, this.dayOffset(o.endDate) - this.dayOffset(o.startDate)),
+          cls: this.blockCls(o),
+          tooltip: `${o.id}\n${o.customer}\n機台 ${o.machineId}\n${o.qty.toLocaleString()} 片\n${o.startDate} → ${o.endDate}`,
+        })),
+      });
+    }
+    return lanes;
+  }
+
+  /** 甘特圖時間軸刻度 */
+  ganttTicks(step: number = 7): { offset: number; label: string }[] {
+    const total = this.ganttTotalDays;
+    const ticks: { offset: number; label: string }[] = [];
+    for (let i = 0; i <= total; i += step) {
+      const d = new Date(this.ganttOrigin);
+      d.setDate(d.getDate() + i);
+      ticks.push({
+        offset: i,
+        label: `${d.getMonth() + 1}/${d.getDate()}`,
+      });
+    }
+    return ticks;
+  }
+
+  /** 產品的日產能（片/天） */
+  productDailyCapacity(machineType: string): number {
+    const typeMachines = this.machines.filter(m => m.type === machineType);
+    if (!typeMachines.length) return 0;
+    const m = typeMachines[0];
+    return m.ratePerPerson * m.stdOps * this.MIN_PER_DAY;
   }
 }

@@ -1,0 +1,92 @@
+<h2>交期追蹤</h2>
+<p class="lede">全訂單交期狀態一覽：預計完成日、實際完成日、延遲原因。可依品名、工單號、通路、客戶等搜尋篩選。</p>
+
+<div class="tiles">
+  <div class="tile">
+    <div class="k">訂單總數</div>
+    <div class="v">{{ stats().total }}</div>
+    <div class="d">歷史 + 進行中 + 排程</div>
+  </div>
+  <div class="tile">
+    <div class="k">已完成 / 已出貨</div>
+    <div class="v ok-text">{{ stats().done }}</div>
+    <div class="d">準時交付 {{ stats().onTime }} 張</div>
+  </div>
+  <div class="tile" [class.warn]="stats().active > 0">
+    <div class="k">生產中 / 已排程</div>
+    <div class="v">{{ stats().active }}</div>
+    <div class="d">待完成訂單</div>
+  </div>
+  <div class="tile" [class.warn]="stats().delayed > 0">
+    <div class="k">延遲 / 預計延遲</div>
+    <div class="v" style="color:var(--bad)">{{ stats().delayed }}</div>
+    <div class="d">含已完成但曾延遲</div>
+  </div>
+</div>
+
+<!-- 搜尋 / 篩選 -->
+<div class="formrow">
+  <div class="field" style="flex:1; min-width:200px">
+    <label>搜尋</label>
+    <input type="text" placeholder="工單號 / 品名 / 客戶 / 通路 / 機台..."
+           [ngModel]="query()" (ngModelChange)="query.set($event)">
+  </div>
+  <div class="field">
+    <label>狀態篩選</label>
+    <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+      <option value="all">全部</option>
+      <option value="active">生產中 / 已排程</option>
+      <option value="done">已完成 / 已出貨</option>
+      <option value="delayed">延遲（含預計）</option>
+      <option value="pending">待排程</option>
+    </select>
+  </div>
+</div>
+
+<div class="hint">找到 {{ filtered().length }} 筆訂單　·　點擊欄位標題排序</div>
+
+<!-- 訂單表 -->
+<div class="tablewrap">
+  <table class="data delivery-table">
+    <thead>
+      <tr>
+        <th class="sortable" (click)="toggleSort('id')">工單號 {{ sortIcon('id') }}</th>
+        <th class="sortable" (click)="toggleSort('item')">品名 {{ sortIcon('item') }}</th>
+        <th class="sortable" (click)="toggleSort('customer')">客戶 {{ sortIcon('customer') }}</th>
+        <th class="sortable" (click)="toggleSort('salesChannel')">通路 {{ sortIcon('salesChannel') }}</th>
+        <th class="sortable" style="text-align:right" (click)="toggleSort('qty')">數量 {{ sortIcon('qty') }}</th>
+        <th>機台</th>
+        <th class="sortable" (click)="toggleSort('expectedDate')">預計交期 {{ sortIcon('expectedDate') }}</th>
+        <th class="sortable" (click)="toggleSort('actualDate')">實際完成 {{ sortIcon('actualDate') }}</th>
+        <th>狀態</th>
+        <th>延遲原因</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (o of filtered(); track o.id) {
+        <tr [class.delay-row]="(o.delayDays ?? 0) > 0">
+          <td class="mono">{{ o.id }}</td>
+          <td>
+            <span>{{ o.item }}</span>
+            @if (o.rush) { <span class="rush-tag">急</span> }
+          </td>
+          <td>{{ o.customer }}</td>
+          <td><span class="channel-chip">{{ o.salesChannel }}</span></td>
+          <td style="text-align:right; font-variant-numeric:tabular-nums">{{ o.qty | number }}</td>
+          <td class="mono" style="font-size:12px">{{ o.machineId.replace('DRX-P-', '') }}</td>
+          <td class="mono">
+            {{ o.expectedDate }}
+            @if (!o.actualDate && daysUntil(o.expectedDate) >= 0 && daysUntil(o.expectedDate) <= 3) {
+              <span class="due-soon">{{ daysUntil(o.expectedDate) === 0 ? '今天' : daysUntil(o.expectedDate) + '天後' }}</span>
+            }
+          </td>
+          <td class="mono">{{ o.actualDate || '—' }}</td>
+          <td><span class="status-pill {{ s.deliveryStatus(o).cls }}">{{ s.deliveryStatus(o).text }}</span></td>
+          <td class="delay-reason">{{ o.delayReason || '' }}</td>
+        </tr>
+      } @empty {
+        <tr><td colspan="10" style="text-align:center; color:var(--ink3); padding:24px">沒有符合條件的訂單</td></tr>
+      }
+    </tbody>
+  </table>
+</div>

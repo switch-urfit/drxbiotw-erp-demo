@@ -8,6 +8,13 @@
   <link rel="icon" type="image/x-icon" href="favicon.ico">
 </head>
 <body>
+  <script>
+    // GitHub Pages SPA redirect restore
+    (function(){
+      var q = new URLSearchParams(location.search).get('p');
+      if (q) history.replaceState(null, '', q + location.hash);
+    })();
+  </script>
   <app-root></app-root>
 </body>
 </html>

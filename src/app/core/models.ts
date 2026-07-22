@@ -67,3 +67,41 @@ export interface RushPreviewResult {
   capacity: number;      // 片/分
   totalDays: number;
 }
+
+export type OrderStatus = 'shipped' | 'completed' | 'in_progress' | 'scheduled' | 'pending' | 'delayed';
+
+export interface ScheduledOrder {
+  id: string;
+  item: string;
+  productCode: string;
+  qty: number;
+  customer: string;
+  salesChannel: string;
+  machineId: string;
+  machineType: MachineType;
+  orderDate: string;
+  expectedDate: string;
+  actualDate?: string;
+  startDate: string;
+  endDate: string;
+  status: OrderStatus;
+  delayReason?: string;
+  delayDays?: number;
+  rush?: boolean;
+}
+
+export interface GanttBlock {
+  id: string;
+  label: string;
+  startDay: number;
+  lengthDays: number;
+  cls: 'completed' | 'in_progress' | 'scheduled' | 'pending' | 'delayed' | 'rush';
+  tooltip: string;
+}
+
+export interface GanttLane {
+  key: string;
+  label: string;
+  sublabel?: string;
+  blocks: GanttBlock[];
+}
