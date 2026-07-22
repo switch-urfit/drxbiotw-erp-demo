@@ -2,7 +2,7 @@
 // 生產甘特圖：依機台 / 依品項 / 依訂單三種視角
 // 機台視角：每列一台機台，顯示歷史 + 未來排程
 // 品項視角：每列一個產品，顯示跨機台的產能配置
-// 訂單視角：每列一位客戶，顯示訂單進度與延遲狀況
+// 訂單視角：依客戶分組，展開可查看各張工單的品項進度
 // ══════════════════════════════════════════════════════════
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -19,15 +19,18 @@ export class ProductionGanttPage {
 
   viewMode = signal<'machine' | 'product' | 'order'>('machine');
   hoveredBlock = signal<string | null>(null);
+  expandedCustomers = signal<Set<string>>(new Set());
 
   readonly lanes = computed<GanttLane[]>(() => {
     switch (this.viewMode()) {
       case 'machine': return this.s.ganttByMachine();
       case 'product': return this.s.ganttByProduct();
-      case 'order':   return this.s.ganttByOrder();
+      case 'order':   return [];
       default:        return this.s.ganttByMachine();
     }
   });
+
+  readonly orderGroups = computed(() => this.s.ganttByOrder());
 
   readonly ticks = computed(() => this.s.ganttTicks(7));
   readonly totalDays = computed(() => this.s.ganttTotalDays);
@@ -76,5 +79,21 @@ export class ProductionGanttPage {
 
   setView(mode: 'machine' | 'product' | 'order'): void {
     this.viewMode.set(mode);
+  }
+
+  isExpanded(customer: string): boolean {
+    return this.expandedCustomers().has(customer);
+  }
+
+  toggleCustomer(customer: string): void {
+    this.expandedCustomers.update(set => {
+      const next = new Set(set);
+      if (next.has(customer)) {
+        next.delete(customer);
+      } else {
+        next.add(customer);
+      }
+      return next;
+    });
   }
 }

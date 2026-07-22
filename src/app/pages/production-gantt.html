@@ -19,50 +19,121 @@
   <span class="today-legend"><i class="today-line-legend"></i> 今天</span>
 </div>
 
-<!-- 甘特圖 -->
-<div class="prod-gantt-wrap">
-  <div class="prod-gantt">
-    <!-- 時間軸（頂部） -->
-    <div class="pg-header">
-      <div class="pg-label-col"></div>
-      <div class="pg-track-col">
-        @for (t of ticks(); track t.offset) {
-          <span class="pg-tick" [style.left.%]="pct(t.offset)">{{ t.label }}</span>
-        }
-      </div>
-    </div>
-
-    <!-- 每列 -->
-    @for (lane of lanes(); track lane.key) {
-      <div class="pg-row">
-        <div class="pg-label-col">
-          <div class="pg-lane-label">{{ lane.label }}</div>
-          @if (lane.sublabel) {
-            <div class="pg-lane-sub">{{ lane.sublabel }}</div>
+<!-- 甘特圖：機台 / 品項（平面列表） -->
+@if (viewMode() !== 'order') {
+  <div class="prod-gantt-wrap">
+    <div class="prod-gantt">
+      <div class="pg-header">
+        <div class="pg-label-col"></div>
+        <div class="pg-track-col">
+          @for (t of ticks(); track t.offset) {
+            <span class="pg-tick" [style.left.%]="pct(t.offset)">{{ t.label }}</span>
           }
         </div>
-        <div class="pg-track-col">
-          <div class="pg-track">
-            <!-- 今天標線 -->
-            <div class="pg-today" [style.left.%]="todayPct()"></div>
-            <!-- 工單色條 -->
-            @for (b of lane.blocks; track b.id) {
-              <div class="pg-bar pg-{{ b.cls }}"
-                   [style.left.%]="pct(b.startDay)"
-                   [style.width.%]="pct(b.lengthDays)"
-                   [title]="b.tooltip"
-                   (mouseenter)="hoveredBlock.set(b.id)"
-                   (mouseleave)="hoveredBlock.set(null)"
-                   [class.hovered]="hoveredBlock() === b.id">
-                <span class="pg-bar-text">{{ b.id }}</span>
-              </div>
+      </div>
+
+      @for (lane of lanes(); track lane.key) {
+        <div class="pg-row">
+          <div class="pg-label-col">
+            <div class="pg-lane-label">{{ lane.label }}</div>
+            @if (lane.sublabel) {
+              <div class="pg-lane-sub">{{ lane.sublabel }}</div>
             }
           </div>
+          <div class="pg-track-col">
+            <div class="pg-track">
+              <div class="pg-today" [style.left.%]="todayPct()"></div>
+              @for (b of lane.blocks; track b.id) {
+                <div class="pg-bar pg-{{ b.cls }}"
+                     [style.left.%]="pct(b.startDay)"
+                     [style.width.%]="pct(b.lengthDays)"
+                     [title]="b.tooltip"
+                     (mouseenter)="hoveredBlock.set(b.id)"
+                     (mouseleave)="hoveredBlock.set(null)"
+                     [class.hovered]="hoveredBlock() === b.id">
+                  <span class="pg-bar-text">{{ b.id }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}
+
+<!-- 甘特圖：訂單（依客戶分組手風琴） -->
+@if (viewMode() === 'order') {
+  <div class="prod-gantt-wrap">
+    <div class="prod-gantt">
+      <div class="pg-header">
+        <div class="pg-label-col"></div>
+        <div class="pg-track-col">
+          @for (t of ticks(); track t.offset) {
+            <span class="pg-tick" [style.left.%]="pct(t.offset)">{{ t.label }}</span>
+          }
         </div>
       </div>
-    }
+
+      @for (group of orderGroups(); track group.customer) {
+        <!-- 客戶標題列（可展開/收合） -->
+        <div class="pg-group-header" [class.expanded]="isExpanded(group.customer)" (click)="toggleCustomer(group.customer)">
+          <div class="pg-label-col">
+            <div class="pg-group-label">
+              <span class="pg-group-arrow">{{ isExpanded(group.customer) ? '▾' : '▸' }}</span>
+              {{ group.customer }}
+            </div>
+            <div class="pg-lane-sub">{{ group.channels }} · {{ group.lanes.length }} 張工單</div>
+          </div>
+          <div class="pg-track-col">
+            <div class="pg-track pg-track-group">
+              <div class="pg-today" [style.left.%]="todayPct()"></div>
+              @for (lane of group.lanes; track lane.key) {
+                @for (b of lane.blocks; track b.id) {
+                  <div class="pg-bar pg-{{ b.cls }}"
+                       [style.left.%]="pct(b.startDay)"
+                       [style.width.%]="pct(b.lengthDays)"
+                       [title]="b.tooltip">
+                  </div>
+                }
+              }
+            </div>
+          </div>
+        </div>
+
+        <!-- 展開後的工單列表 -->
+        @if (isExpanded(group.customer)) {
+          @for (lane of group.lanes; track lane.key) {
+            <div class="pg-row pg-row-child">
+              <div class="pg-label-col">
+                <div class="pg-lane-label">{{ lane.label }}</div>
+                @if (lane.sublabel) {
+                  <div class="pg-lane-sub">{{ lane.sublabel }}</div>
+                }
+              </div>
+              <div class="pg-track-col">
+                <div class="pg-track">
+                  <div class="pg-today" [style.left.%]="todayPct()"></div>
+                  @for (b of lane.blocks; track b.id) {
+                    <div class="pg-bar pg-{{ b.cls }}"
+                         [style.left.%]="pct(b.startDay)"
+                         [style.width.%]="pct(b.lengthDays)"
+                         [title]="b.tooltip"
+                         (mouseenter)="hoveredBlock.set(b.id)"
+                         (mouseleave)="hoveredBlock.set(null)"
+                         [class.hovered]="hoveredBlock() === b.id">
+                      <span class="pg-bar-text">{{ b.label }}</span>
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          }
+        }
+      }
+    </div>
   </div>
-</div>
+}
 
 <!-- 統計摘要 -->
 @if (viewMode() === 'machine') {
