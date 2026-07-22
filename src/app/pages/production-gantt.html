@@ -1,10 +1,11 @@
 <h2>生產甘特圖</h2>
-<p class="lede">所有機台的歷史生產紀錄與未來排程。可切換為「依品項」視角，查看每項產品的跨機台排程與固定日產能。</p>
+<p class="lede">所有機台的歷史生產紀錄與未來排程。可切換為「依品項」或「依訂單」視角，分別查看跨機台排程與各客戶訂單進度。</p>
 
 <!-- 視角切換 -->
 <div class="gantt-toggle">
   <button [class.active]="viewMode() === 'machine'" (click)="setView('machine')">依機台</button>
   <button [class.active]="viewMode() === 'product'" (click)="setView('product')">依品項</button>
+  <button [class.active]="viewMode() === 'order'"   (click)="setView('order')">依訂單</button>
 </div>
 
 <!-- 圖例 -->
@@ -93,7 +94,7 @@
       </tbody>
     </table>
   </div>
-} @else {
+} @else if (viewMode() === 'product') {
   <h3>品項產能與排程</h3>
   <div class="intro">
     每品項日產能由機台類型決定（<b>固定日產能 = 每人產能 × 標準人數 × 480 分鐘</b>），增減人力或機台直接影響完成天數。
@@ -117,6 +118,43 @@
             <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.dailyCap | number:'1.0-0' }}</td>
             <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.totalQty | number }}</td>
             <td style="text-align:right; font-variant-numeric:tabular-nums">{{ p.batches }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+} @else {
+  <h3>客戶訂單進度</h3>
+  <div class="intro">
+    依客戶彙總所有工單，可一覽各客戶的訂單數量、完成進度與延遲狀況。
+  </div>
+  <div class="tablewrap">
+    <table class="data">
+      <thead>
+        <tr>
+          <th>客戶</th>
+          <th>通路</th>
+          <th style="text-align:right">工單數</th>
+          <th style="text-align:right">累計數量</th>
+          <th style="text-align:right">已完成</th>
+          <th style="text-align:right">延遲</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (o of orderSummary(); track o.customer) {
+          <tr>
+            <td>{{ o.customer }}</td>
+            <td>{{ o.channels }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ o.totalOrders }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ o.totalQty | number }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">{{ o.done }}</td>
+            <td style="text-align:right; font-variant-numeric:tabular-nums">
+              @if (o.delayed > 0) {
+                <span class="badge bad">{{ o.delayed }}</span>
+              } @else {
+                0
+              }
+            </td>
           </tr>
         }
       </tbody>

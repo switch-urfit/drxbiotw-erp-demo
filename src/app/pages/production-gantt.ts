@@ -1,7 +1,8 @@
 // ══════════════════════════════════════════════════════════
-// 生產甘特圖：依機台 / 依品項兩種視角
+// 生產甘特圖：依機台 / 依品項 / 依訂單三種視角
 // 機台視角：每列一台機台，顯示歷史 + 未來排程
 // 品項視角：每列一個產品，顯示跨機台的產能配置
+// 訂單視角：每列一位客戶，顯示訂單進度與延遲狀況
 // ══════════════════════════════════════════════════════════
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -16,13 +17,16 @@ import { GanttLane } from '../core/models';
 export class ProductionGanttPage {
   readonly s = inject(SchedulerService);
 
-  viewMode = signal<'machine' | 'product'>('machine');
+  viewMode = signal<'machine' | 'product' | 'order'>('machine');
   hoveredBlock = signal<string | null>(null);
 
   readonly lanes = computed<GanttLane[]>(() => {
-    return this.viewMode() === 'machine'
-      ? this.s.ganttByMachine()
-      : this.s.ganttByProduct();
+    switch (this.viewMode()) {
+      case 'machine': return this.s.ganttByMachine();
+      case 'product': return this.s.ganttByProduct();
+      case 'order':   return this.s.ganttByOrder();
+      default:        return this.s.ganttByMachine();
+    }
   });
 
   readonly ticks = computed(() => this.s.ganttTicks(7));
@@ -53,7 +57,24 @@ export class ProductionGanttPage {
     });
   });
 
-  setView(mode: 'machine' | 'product'): void {
+  readonly orderSummary = computed(() => {
+    const allOrders = this.s.allOrders();
+    const grouped = new Map<string, typeof allOrders>();
+    for (const o of allOrders) {
+      const list = grouped.get(o.customer) ?? [];
+      list.push(o);
+      grouped.set(o.customer, list);
+    }
+    return [...grouped.entries()].map(([customer, orders]) => {
+      const totalQty = orders.reduce((s, o) => s + o.qty, 0);
+      const done = orders.filter(o => o.status === 'shipped' || o.status === 'completed').length;
+      const delayed = orders.filter(o => (o.delayDays ?? 0) > 0).length;
+      const channels = [...new Set(orders.map(o => o.salesChannel))].join('、');
+      return { customer, channels, totalOrders: orders.length, totalQty, done, delayed };
+    });
+  });
+
+  setView(mode: 'machine' | 'product' | 'order'): void {
     this.viewMode.set(mode);
   }
 }

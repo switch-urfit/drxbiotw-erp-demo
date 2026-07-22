@@ -344,6 +344,37 @@ export class SchedulerService {
     return lanes;
   }
 
+  ganttByOrder(): GanttLane[] {
+    const orders = this.allOrders();
+    const grouped = new Map<string, ScheduledOrder[]>();
+    for (const o of orders) {
+      const list = grouped.get(o.customer) ?? [];
+      list.push(o);
+      grouped.set(o.customer, list);
+    }
+    const lanes: GanttLane[] = [];
+    for (const [customer, custOrders] of grouped) {
+      const sorted = custOrders.sort((a, b) =>
+        this.dayOffset(a.startDate) - this.dayOffset(b.startDate));
+      const items = [...new Set(sorted.map(o => o.item))];
+      const channels = [...new Set(sorted.map(o => o.salesChannel))];
+      lanes.push({
+        key: customer,
+        label: customer,
+        sublabel: `${channels.join('、')} · ${sorted.length} 張工單`,
+        blocks: sorted.map(o => ({
+          id: o.id,
+          label: `${o.id} ${o.item.replace('口罩 ', '')}`,
+          startDay: Math.max(0, this.dayOffset(o.startDate)),
+          lengthDays: Math.max(1, this.dayOffset(o.endDate) - this.dayOffset(o.startDate)),
+          cls: this.blockCls(o),
+          tooltip: `${o.id}\n${o.item} × ${o.qty.toLocaleString()}\n機台 ${o.machineId}\n${o.startDate} → ${o.endDate}\n${this.deliveryStatus(o).text}`,
+        })),
+      });
+    }
+    return lanes;
+  }
+
   /** 甘特圖時間軸刻度 */
   ganttTicks(step: number = 7): { offset: number; label: string }[] {
     const total = this.ganttTotalDays;
